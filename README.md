@@ -1,10 +1,10 @@
-# Welcome to your Lovable project
+# Education Platform - EduSync
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/5fdfc547-66e6-4655-a141-6f791c824258
+This is the repository for EduSync, an education platform designed to streamline learning and collaboration among students and educators. The project is built using modern web technologies to ensure a seamless user experience.
 
-## How can I edit this code?
+<!-- ## How can I edit this code?
 
 There are several ways of editing your application.
 
@@ -12,7 +12,7 @@ There are several ways of editing your application.
 
 Simply visit the [Lovable Project](https://lovable.dev/projects/5fdfc547-66e6-4655-a141-6f791c824258) and start prompting.
 
-Changes made via Lovable will be committed automatically to this repo.
+Changes made via Lovable will be committed automatically to this repo. -->
 
 **Use your preferred IDE**
 
@@ -60,7 +60,7 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+<!-- ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/5fdfc547-66e6-4655-a141-6f791c824258) and click on Share -> Publish.
 
@@ -70,4 +70,4 @@ Yes, you can!
 
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain) -->
