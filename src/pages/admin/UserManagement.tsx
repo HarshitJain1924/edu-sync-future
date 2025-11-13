@@ -4,12 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Brain, Search, Shield, ChevronLeft, Ban, Eye } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useRequireRole } from "@/hooks/useRequireRole";
 import { cn } from "@/lib/utils";
 
 const UserManagement = () => {
-  useRequireAuth();
+  const { isAuthorized, isLoading } = useRequireRole('admin');
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
+
   const [filter, setFilter] = useState<"all" | "student" | "teacher" | "admin">("all");
   const [searchQuery, setSearchQuery] = useState("");
 

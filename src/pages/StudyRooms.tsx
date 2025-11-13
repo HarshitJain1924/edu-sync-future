@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Users, ArrowLeft, LogOut } from "lucide-react";
+import { roomSchema } from "@/lib/validations";
+import { z } from 'zod';
 
 interface StudyRoom {
   id: string;
@@ -75,14 +77,19 @@ const StudyRooms = () => {
     e.preventDefault();
 
     try {
+      const validated = roomSchema.parse({
+        name: newRoomName,
+        description: newRoomDescription,
+      });
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { error } = await supabase
         .from("study_rooms")
         .insert({
-          name: newRoomName,
-          description: newRoomDescription,
+          name: validated.name,
+          description: validated.description,
           created_by: user.id,
         });
 
@@ -98,11 +105,19 @@ const StudyRooms = () => {
       setNewRoomDescription("");
       fetchRooms();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create room. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 

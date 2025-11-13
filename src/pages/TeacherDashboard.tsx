@@ -2,12 +2,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Brain, Plus, Users, FileText, TrendingUp, Clock, BookOpen, Video, MessageSquare, Home } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useRequireRole } from "@/hooks/useRequireRole";
 import { Progress } from "@/components/ui/progress";
 
 const TeacherDashboard = () => {
-  useRequireAuth();
+  const { isAuthorized, isLoading } = useRequireRole('teacher');
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   const myRooms = [
     { id: 1, name: "Mathematics 101", students: 24, active: true },

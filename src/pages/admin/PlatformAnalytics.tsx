@@ -2,12 +2,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Brain, ChevronLeft, TrendingUp, Users, Video, BookOpen, Activity } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useRequireRole } from "@/hooks/useRequireRole";
 import { Progress } from "@/components/ui/progress";
 
 const PlatformAnalytics = () => {
-  useRequireAuth();
+  const { isAuthorized, isLoading } = useRequireRole('admin');
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   const metrics = [
     { label: "Total Users", value: "1,234", trend: "+12% this month", icon: Users },
