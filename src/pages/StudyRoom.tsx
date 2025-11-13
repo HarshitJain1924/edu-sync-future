@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Send, Video, Mic, Users, ArrowLeft, Maximize2, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { messageSchema } from "@/lib/validations";
+import { z } from 'zod';
 
 interface Message {
   id: string;
@@ -179,22 +181,32 @@ const StudyRoom = () => {
     if (!message.trim() || !currentUser) return;
 
     try {
+      const validated = messageSchema.parse({ message });
+
       const { error } = await supabase
         .from("room_messages")
         .insert({
           room_id: roomId,
           user_id: currentUser.id,
-          message: message.trim(),
+          message: validated.message,
         });
 
       if (error) throw error;
       setMessage("");
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to send message. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 

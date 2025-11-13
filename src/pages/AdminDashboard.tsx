@@ -2,11 +2,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Brain, Users, Video, FileText, TrendingUp, Shield, AlertTriangle, Home } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useRequireAuth } from "@/hooks/useRequireAuth";
+import { useRequireRole } from "@/hooks/useRequireRole";
 
 const AdminDashboard = () => {
-  useRequireAuth();
+  const { isAuthorized, isLoading } = useRequireRole('admin');
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-lg">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) return null;
 
   const stats = [
     { label: "Total Users", value: "1,234", change: "+12%", icon: Users, color: "from-blue-500 to-cyan-500" },
