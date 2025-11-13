@@ -14,6 +14,8 @@ import Flashcards from "./pages/Flashcards";
 import Quiz from "./pages/Quiz";
 import Games from "./pages/Games";
 import GameTemplate from "./pages/games/GameTemplate";
+import VideoLibrary from "./pages/VideoLibrary";
+import VideoPlayer from "./pages/VideoPlayer";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
@@ -42,6 +44,8 @@ const App = () => (
           <Route path="/quiz" element={<Quiz />} />
           <Route path="/games" element={<Games />} />
           <Route path="/games/:gameId" element={<GameTemplate />} />
+          <Route path="/videos" element={<VideoLibrary />} />
+          <Route path="/video/:videoId" element={<VideoPlayer />} />
           <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/users" element={<UserManagement />} />
