@@ -55,6 +55,15 @@ const Dashboard = () => {
               <Brain className="h-5 w-5" />
               Quizzes
             </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/games")}>
+              🎮 Play & Prepare
+            </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/teacher")}>
+              👨‍🏫 Teacher Panel
+            </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/admin")}>
+              🛡️ Admin Panel
+            </Button>
             <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/settings")}>
               <Settings className="h-5 w-5" />
               Settings
