@@ -32,10 +32,10 @@ const Navbar = () => {
               About
             </Link>
             <div className="flex items-center gap-3 ml-4">
-              <Button variant="ghost" onClick={() => navigate("/login")}>
+              <Button variant="ghost" onClick={() => navigate("/auth")}>
                 Login
               </Button>
-              <Button variant="hero" onClick={() => navigate("/signup")}>
+              <Button variant="hero" onClick={() => navigate("/auth")}>
                 Get Started
               </Button>
             </div>
@@ -75,10 +75,10 @@ const Navbar = () => {
               About
             </Link>
             <div className="flex flex-col gap-2 pt-2">
-              <Button variant="ghost" onClick={() => navigate("/login")} className="w-full">
+              <Button variant="ghost" onClick={() => navigate("/auth")} className="w-full">
                 Login
               </Button>
-              <Button variant="hero" onClick={() => navigate("/signup")} className="w-full">
+              <Button variant="hero" onClick={() => navigate("/auth")} className="w-full">
                 Get Started
               </Button>
             </div>
