@@ -2,8 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Brain, ArrowLeft, TrendingUp, TrendingDown, Award, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const Analytics = () => {
+  useRequireAuth();
   const navigate = useNavigate();
 
   const performanceData = [

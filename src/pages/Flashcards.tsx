@@ -46,7 +46,9 @@ const Flashcards = () => {
       if (error) throw error;
       setFlashcardSets(data || []);
     } catch (error) {
-      console.error("Error fetching flashcard sets:", error);
+      if (import.meta.env.DEV) {
+        console.error("Error fetching flashcard sets:", error);
+      }
       toast({
         title: "Error",
         description: "Failed to load flashcard sets",
@@ -72,7 +74,9 @@ const Flashcards = () => {
       setIsFlipped(false);
       setKnownCards(new Set());
     } catch (error) {
-      console.error("Error fetching flashcards:", error);
+      if (import.meta.env.DEV) {
+        console.error("Error fetching flashcards:", error);
+      }
       toast({
         title: "Error",
         description: "Failed to load flashcards",

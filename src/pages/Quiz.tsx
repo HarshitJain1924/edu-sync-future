@@ -50,7 +50,9 @@ const Quiz = () => {
       if (error) throw error;
       setQuizSets(data || []);
     } catch (error) {
-      console.error("Error fetching quiz sets:", error);
+      if (import.meta.env.DEV) {
+        console.error("Error fetching quiz sets:", error);
+      }
       toast({
         title: "Error",
         description: "Failed to load quiz sets",
@@ -85,7 +87,9 @@ const Quiz = () => {
       setCorrectAnswers(0);
       setShowResults(false);
     } catch (error) {
-      console.error("Error fetching questions:", error);
+      if (import.meta.env.DEV) {
+        console.error("Error fetching questions:", error);
+      }
       toast({
         title: "Error",
         description: "Failed to load quiz questions",

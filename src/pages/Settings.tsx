@@ -7,8 +7,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const Settings = () => {
+  useRequireAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 

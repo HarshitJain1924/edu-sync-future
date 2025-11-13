@@ -2,8 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Brain, BookOpen, Video, Calendar, TrendingUp, Users, Settings, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useRequireAuth } from "@/hooks/useRequireAuth";
 
 const Dashboard = () => {
+  useRequireAuth();
   const navigate = useNavigate();
   const userName = "Alex"; // Mock user name
 
