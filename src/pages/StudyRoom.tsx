@@ -1,32 +1,219 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Brain, Mic, Video, MessageSquare, Users, Maximize2, Settings, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Send, Video, Mic, Users, ArrowLeft, Maximize2, MessageSquare } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Message {
+  id: string;
+  message: string;
+  created_at: string;
+  profiles: {
+    username: string;
+  };
+  user_id: string;
+}
+
+interface Participant {
+  id: string;
+  is_online: boolean;
+  user_id: string;
+  profiles: {
+    username: string;
+  };
+}
 
 const StudyRoom = () => {
+  const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([
-    { id: 1, type: "ai", text: "Hello! I'm your AI study assistant. How can I help you today?" },
-    { id: 2, type: "user", text: "Can you explain quantum mechanics?" },
-    { id: 3, type: "ai", text: "Quantum mechanics is the branch of physics that studies matter and energy at atomic and subatomic scales..." },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [roomName, setRoomName] = useState("");
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (roomId && currentUser) {
+      fetchRoomDetails();
+      fetchMessages();
+      fetchParticipants();
+      
+      const messagesChannel = subscribeToMessages();
+      const participantsChannel = subscribeToParticipants();
+
+      return () => {
+        if (messagesChannel) supabase.removeChannel(messagesChannel);
+        if (participantsChannel) supabase.removeChannel(participantsChannel);
+      };
+    }
+  }, [roomId, currentUser]);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/auth");
+    } else {
+      setCurrentUser(user);
+    }
+  };
+
+  const fetchRoomDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("study_rooms")
+        .select("name")
+        .eq("id", roomId)
+        .single();
+
+      if (error) throw error;
+      setRoomName(data.name);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchMessages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("room_messages")
+        .select(`
+          id,
+          message,
+          created_at,
+          user_id,
+          profiles:user_id (username)
+        `)
+        .eq("room_id", roomId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      setMessages(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchParticipants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("room_participants")
+        .select(`
+          id,
+          is_online,
+          user_id,
+          profiles:user_id (username)
+        `)
+        .eq("room_id", roomId);
+
+      if (error) throw error;
+      setParticipants(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const subscribeToMessages = () => {
+    const channel = supabase
+      .channel(`room_messages:${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "room_messages",
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return channel;
+  };
+
+  const subscribeToParticipants = () => {
+    const channel = supabase
+      .channel(`room_participants:${roomId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "room_participants",
+          filter: `room_id=eq.${roomId}`,
+        },
+        () => {
+          fetchParticipants();
+        }
+      )
+      .subscribe();
+
+    return channel;
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim()) {
-      setMessages([...messages, { id: messages.length + 1, type: "user", text: message }]);
+    if (!message.trim() || !currentUser) return;
+
+    try {
+      const { error } = await supabase
+        .from("room_messages")
+        .insert({
+          room_id: roomId,
+          user_id: currentUser.id,
+          message: message.trim(),
+        });
+
+      if (error) throw error;
       setMessage("");
-      // Mock AI response
-      setTimeout(() => {
-        setMessages(prev => [...prev, { 
-          id: prev.length + 1, 
-          type: "ai", 
-          text: "I'm analyzing your question. Let me help you understand this concept better..." 
-        }]);
-      }, 1000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLeaveRoom = async () => {
+    try {
+      if (currentUser) {
+        await supabase
+          .from("room_participants")
+          .delete()
+          .eq("room_id", roomId)
+          .eq("user_id", currentUser.id);
+      }
+      navigate("/study-rooms");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -35,21 +222,18 @@ const StudyRoom = () => {
       {/* Header */}
       <header className="bg-card border-b border-border px-6 py-4 flex items-center justify-between shadow-soft">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" size="sm" onClick={handleLeaveRoom}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold">AI Study Room</h1>
-            <p className="text-sm text-muted-foreground">Mathematics 101 - Group Study</p>
+            <h1 className="text-xl font-bold">{roomName || "Study Room"}</h1>
+            <p className="text-sm text-muted-foreground">Virtual Study Session</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-2">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">3 Online</span>
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">{participants.length} Online</span>
           </Button>
         </div>
       </header>
@@ -61,119 +245,104 @@ const StudyRoom = () => {
           <Card className="shadow-medium">
             <CardContent className="p-4">
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="aspect-video bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg flex items-center justify-center relative group">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-2xl font-bold text-primary-foreground">AJ</span>
+                {participants.slice(0, 4).map((participant) => (
+                  <div 
+                    key={participant.id} 
+                    className="aspect-video bg-gradient-to-br from-primary/20 to-accent/20 rounded-lg flex items-center justify-center relative group"
+                  >
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-2">
+                        <span className="text-2xl font-bold text-primary-foreground">
+                          {participant.profiles?.username?.[0]?.toUpperCase() || "?"}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium">
+                        {participant.profiles?.username || "Unknown"}
+                        {participant.user_id === currentUser?.id && " (You)"}
+                      </p>
                     </div>
-                    <p className="text-sm font-medium">Alex Johnson (You)</p>
+                    <Button size="sm" variant="secondary" className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Maximize2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button size="sm" variant="secondary" className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="aspect-video bg-gradient-to-br from-secondary/20 to-primary/20 rounded-lg flex items-center justify-center relative group">
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-2">
-                      <span className="text-2xl font-bold text-secondary-foreground">SM</span>
-                    </div>
-                    <p className="text-sm font-medium">Sarah Miller</p>
-                  </div>
-                  <Button size="sm" variant="secondary" className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                ))}
               </div>
 
-              <div className="flex items-center justify-center gap-4">
-                <Button variant="outline" size="lg" className="gap-2">
-                  <Mic className="h-5 w-5" />
-                  <span className="hidden sm:inline">Mute</span>
+              <div className="flex items-center justify-center gap-2">
+                <Button size="sm" variant="outline">
+                  <Mic className="h-4 w-4 mr-2" />
+                  Mute
                 </Button>
-                <Button variant="outline" size="lg" className="gap-2">
-                  <Video className="h-5 w-5" />
-                  <span className="hidden sm:inline">Camera</span>
-                </Button>
-                <Button variant="destructive" size="lg">
-                  Leave Room
+                <Button size="sm" variant="outline">
+                  <Video className="h-4 w-4 mr-2" />
+                  Stop Video
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Whiteboard */}
+          {/* Shared Whiteboard */}
           <Card className="flex-1 shadow-medium">
-            <CardHeader>
-              <CardTitle className="text-lg">Shared Whiteboard</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-border">
-                <p className="text-muted-foreground">Collaborative whiteboard area</p>
+            <CardContent className="p-4 h-full">
+              <div className="bg-muted rounded-lg h-[calc(100vh-400px)] flex items-center justify-center">
+                <p className="text-muted-foreground">Shared Whiteboard (Coming Soon)</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* AI Assistant Panel */}
-        <Card className="border-l border-border rounded-none shadow-soft">
-          <CardHeader className="border-b border-border">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <div className="p-2 bg-gradient-hero rounded-lg">
-                <Brain className="h-5 w-5 text-primary-foreground" />
-              </div>
-              AI Study Assistant
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 flex flex-col h-[calc(100vh-170px)]">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Chat Panel */}
+        <div className="border-l border-border flex flex-col">
+          <div className="p-4 border-b border-border">
+            <h2 className="font-semibold flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Room Chat
+            </h2>
+          </div>
+
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-lg p-3 ${
-                    msg.type === "user" 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-foreground"
-                  }`}>
-                    <p className="text-sm">{msg.text}</p>
+                <div key={msg.id} className="flex gap-2">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarFallback>
+                      {msg.profiles?.username?.[0]?.toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">
+                        {msg.profiles?.username || "Unknown"}
+                        {msg.user_id === currentUser?.id && " (You)"}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {new Date(msg.created_at).toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-sm mt-1 break-words">{msg.message}</p>
                   </div>
                 </div>
               ))}
             </div>
+          </ScrollArea>
 
-            {/* Quick Actions */}
-            <div className="border-t border-border p-4 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Quick Actions</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="text-xs">
-                  Summarize Notes
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs">
-                  Generate Quiz
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs">
-                  Explain Topic
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs">
-                  Find Resources
-                </Button>
-              </div>
+          <form onSubmit={handleSendMessage} className="p-4 border-t border-border">
+            <div className="flex gap-2">
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1"
+              />
+              <Button type="submit" size="icon">
+                <Send className="h-4 w-4" />
+              </Button>
             </div>
-
-            {/* Input */}
-            <form onSubmit={handleSendMessage} className="border-t border-border p-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ask AI anything..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                />
-                <Button type="submit" variant="hero">
-                  <MessageSquare className="h-5 w-5" />
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          </form>
+        </div>
       </div>
     </div>
   );

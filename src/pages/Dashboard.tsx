@@ -37,9 +37,9 @@ const Dashboard = () => {
               <BookOpen className="h-5 w-5" />
               Home
             </Button>
-            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/study-room")}>
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/study-rooms")}>
               <Video className="h-5 w-5" />
-              AI Study Room
+              Study Rooms
             </Button>
             <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/analytics")}>
               <TrendingUp className="h-5 w-5" />
@@ -120,9 +120,9 @@ const Dashboard = () => {
               <CardDescription>Start learning now</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="hero" className="w-full justify-start gap-3" onClick={() => navigate("/study-room")}>
+              <Button variant="hero" className="w-full justify-start gap-3" onClick={() => navigate("/study-rooms")}>
                 <Brain className="h-5 w-5" />
-                AI Study Room
+                Study Rooms
               </Button>
               <Button variant="outline" className="w-full justify-start gap-3">
                 <Calendar className="h-5 w-5" />
