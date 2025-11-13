@@ -10,6 +10,8 @@ import StudyRooms from "./pages/StudyRooms";
 import StudyRoom from "./pages/StudyRoom";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Flashcards from "./pages/Flashcards";
+import Quiz from "./pages/Quiz";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
           <Route path="/study-room/:roomId" element={<StudyRoom />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/flashcards" element={<Flashcards />} />
+          <Route path="/quiz" element={<Quiz />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

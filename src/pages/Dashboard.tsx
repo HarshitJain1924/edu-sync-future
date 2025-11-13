@@ -45,6 +45,14 @@ const Dashboard = () => {
               <TrendingUp className="h-5 w-5" />
               Analytics
             </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/flashcards")}>
+              <BookOpen className="h-5 w-5" />
+              Flashcards
+            </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/quiz")}>
+              <Brain className="h-5 w-5" />
+              Quizzes
+            </Button>
             <Button variant="ghost" className="w-full justify-start gap-3" onClick={() => navigate("/settings")}>
               <Settings className="h-5 w-5" />
               Settings
