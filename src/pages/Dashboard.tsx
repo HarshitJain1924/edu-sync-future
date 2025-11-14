@@ -51,6 +51,11 @@ const Dashboard = () => {
     return `${hours}h ${minutes}m`;
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
   const upcomingSessions = [
     { id: 1, title: "Mathematics 101", time: "Today, 2:00 PM", teacher: "Dr. Smith" },
     { id: 2, title: "Physics Lab", time: "Tomorrow, 10:00 AM", teacher: "Prof. Johnson" },
@@ -118,7 +123,7 @@ const Dashboard = () => {
           </nav>
 
           <div className="absolute bottom-6 left-6 right-6">
-            <Button variant="outline" className="w-full justify-start gap-3" onClick={() => navigate("/")}>
+            <Button variant="outline" className="w-full justify-start gap-3" onClick={handleLogout}>
               <LogOut className="h-5 w-5" />
               Logout
             </Button>
