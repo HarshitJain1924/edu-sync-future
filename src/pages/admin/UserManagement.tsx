@@ -1,51 +1,146 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Brain, Search, Shield, ChevronLeft, Ban, Eye } from "lucide-react";
+import { Brain, Search, ChevronLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useRequireRole } from "@/hooks/useRequireRole";
-import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+
+type AppRole = 'student' | 'teacher' | 'admin';
+
+interface UserWithRoles {
+  id: string;
+  email: string;
+  created_at: string;
+  roles: AppRole[];
+}
 
 const UserManagement = () => {
+  // All hooks MUST be called before any conditional returns
   const { isAuthorized, isLoading } = useRequireRole('admin');
   const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [users, setUsers] = useState<UserWithRoles[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | AppRole>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  if (isLoading) {
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchUsers();
+    }
+  }, [isAuthorized]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: authUsers, error: usersError } = await supabase.auth.admin.listUsers();
+      
+      if (usersError) throw usersError;
+
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      if (rolesError) throw rolesError;
+
+      const usersWithRoles: UserWithRoles[] = authUsers.users.map(user => ({
+        id: user.id,
+        email: user.email || 'No email',
+        created_at: user.created_at,
+        roles: userRoles
+          ?.filter(ur => ur.user_id === user.id)
+          .map(ur => ur.role as AppRole) || []
+      }));
+
+      setUsers(usersWithRoles);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch users',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addRole = async (userId: string, role: AppRole) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({ user_id: userId, role });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Role ${role} added successfully`
+      });
+
+      await fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add role',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const removeRole = async (userId: string, role: AppRole) => {
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', role);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Role ${role} removed successfully`
+      });
+
+      await fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove role',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // Now we can safely do conditional returns AFTER all hooks
+  if (isLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg">Checking permissions...</p>
+        <p className="text-lg">Loading...</p>
       </div>
     );
   }
 
   if (!isAuthorized) return null;
 
-  const [filter, setFilter] = useState<"all" | "student" | "teacher" | "admin">("all");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const users = [
-    { id: 1, name: "Alice Johnson", email: "alice@example.com", role: "student", status: "active", joined: "2024-01-15" },
-    { id: 2, name: "Bob Smith", email: "bob@example.com", role: "teacher", status: "active", joined: "2024-01-10" },
-    { id: 3, name: "Carol White", email: "carol@example.com", role: "student", status: "active", joined: "2024-02-01" },
-    { id: 4, name: "David Brown", email: "david@example.com", role: "admin", status: "active", joined: "2023-12-20" },
-    { id: 5, name: "Eve Davis", email: "eve@example.com", role: "student", status: "disabled", joined: "2024-01-25" },
-    { id: 6, name: "Frank Miller", email: "frank@example.com", role: "teacher", status: "active", joined: "2024-02-10" }
-  ];
-
   const filteredUsers = users.filter(user => {
-    const matchesRole = filter === "all" || user.role === filter;
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = filter === "all" || user.roles.includes(filter);
+    const matchesSearch = user.email.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesRole && matchesSearch;
   });
 
-  const getRoleBadgeColor = (role: string) => {
+  const getRoleBadgeColor = (role: AppRole) => {
     switch (role) {
-      case "admin": return "bg-red-500/10 text-red-500";
-      case "teacher": return "bg-blue-500/10 text-blue-500";
-      case "student": return "bg-green-500/10 text-green-500";
-      default: return "bg-muted text-muted-foreground";
+      case "admin": return "bg-red-500/10 text-red-500 border-red-500/20";
+      case "teacher": return "bg-blue-500/10 text-blue-500 border-blue-500/20";
+      case "student": return "bg-green-500/10 text-green-500 border-green-500/20";
     }
   };
 
@@ -74,7 +169,6 @@ const UserManagement = () => {
             <p className="text-muted-foreground">Manage platform users and permissions</p>
           </header>
 
-          {/* Filters and Search */}
           <Card className="mb-6 shadow-soft">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row gap-4">
@@ -82,7 +176,7 @@ const UserManagement = () => {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input 
-                      placeholder="Search users by name or email..." 
+                      placeholder="Search users by email..." 
                       className="pl-10"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -119,52 +213,63 @@ const UserManagement = () => {
             </CardContent>
           </Card>
 
-          {/* Users List */}
           <Card className="shadow-soft">
             <CardHeader>
-              <CardTitle>All Users ({filteredUsers.length})</CardTitle>
-              <CardDescription>View and manage user accounts</CardDescription>
+              <CardTitle>Users ({filteredUsers.length})</CardTitle>
+              <CardDescription>Manage user roles and permissions</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {filteredUsers.map((user) => (
-                  <div 
-                    key={user.id} 
-                    className="flex items-center justify-between p-4 bg-muted rounded-lg hover:shadow-medium transition-all"
-                  >
+                  <div key={user.id} className="flex items-center justify-between p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold">{user.name}</h3>
-                        <span className={cn("px-2 py-1 rounded-full text-xs font-semibold", getRoleBadgeColor(user.role))}>
-                          {user.role}
-                        </span>
-                        {user.status === "disabled" && (
-                          <span className="px-2 py-1 bg-red-500/10 text-red-500 rounded-full text-xs font-semibold">
-                            Disabled
-                          </span>
-                        )}
+                        <h3 className="font-semibold">{user.email}</h3>
+                        <div className="flex gap-2">
+                          {user.roles.length > 0 ? (
+                            user.roles.map((role) => (
+                              <Badge key={role} className={getRoleBadgeColor(role)} variant="outline">
+                                {role}
+                              </Badge>
+                            ))
+                          ) : (
+                            <Badge variant="outline" className="bg-muted text-muted-foreground">
+                              No role
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
-                      <p className="text-xs text-muted-foreground">Joined: {user.joined}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Joined: {new Date(user.created_at).toLocaleDateString()}
+                      </p>
                     </div>
+                    
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline">
-                        <Eye className="mr-2 h-4 w-4" />
-                        View
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant={user.status === "active" ? "destructive" : "default"}
-                      >
-                        {user.status === "active" ? (
-                          <>
-                            <Ban className="mr-2 h-4 w-4" />
-                            Disable
-                          </>
-                        ) : (
-                          "Enable"
-                        )}
-                      </Button>
+                      <Select onValueChange={(role) => addRole(user.id, role as AppRole)}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Add role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="student">Student</SelectItem>
+                          <SelectItem value="teacher">Teacher</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {user.roles.length > 0 && (
+                        <Select onValueChange={(role) => removeRole(user.id, role as AppRole)}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Remove role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {user.roles.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {role}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                 ))}
