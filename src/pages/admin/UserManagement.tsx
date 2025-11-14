@@ -40,9 +40,12 @@ const UserManagement = () => {
     try {
       setLoading(true);
       
-      const { data: authUsers, error: usersError } = await supabase.auth.admin.listUsers();
+      // Fetch profiles with their roles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, created_at');
       
-      if (usersError) throw usersError;
+      if (profilesError) throw profilesError;
 
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
@@ -50,12 +53,12 @@ const UserManagement = () => {
       
       if (rolesError) throw rolesError;
 
-      const usersWithRoles: UserWithRoles[] = authUsers.users.map(user => ({
-        id: user.id,
-        email: user.email || 'No email',
-        created_at: user.created_at,
+      const usersWithRoles: UserWithRoles[] = profiles.map(profile => ({
+        id: profile.id,
+        email: profile.username || 'No username',
+        created_at: profile.created_at,
         roles: userRoles
-          ?.filter(ur => ur.user_id === user.id)
+          ?.filter(ur => ur.user_id === profile.id)
           .map(ur => ur.role as AppRole) || []
       }));
 
